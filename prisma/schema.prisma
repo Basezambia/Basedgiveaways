@@ -1,0 +1,77 @@
+// This is your Prisma schema file.
+// Learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_DATABASE_URL")
+}
+
+model Campaign {
+  id            String   @id @default(cuid())
+  title         String
+  description   String
+  imageUrl      String
+  rules         String
+  isActive      Boolean  @default(true)
+  endTime       DateTime?
+  winnerSelected Boolean @default(false)
+  winnerHash    String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  // Event details
+  eventDate     DateTime?
+  location      String?
+  artist        String?
+  
+  // Relations
+  submissions   Submission[]
+  
+  @@map("campaigns")
+  @@index([isActive])
+  @@index([createdAt])
+}
+
+model Submission {
+  id                String   @id @default(cuid())
+  name              String
+  email             String
+  walletAddress     String
+  entryCount        Int      @default(1)
+  isVerified        Boolean  @default(false)
+  verificationHash  String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  // Foreign Keys
+  campaignId        String
+  campaign          Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  
+  @@map("submissions")
+  @@unique([email, campaignId])
+  @@unique([walletAddress, campaignId])
+  @@index([campaignId])
+  @@index([isVerified])
+  @@index([createdAt])
+  @@index([entryCount])
+}
+
+model Admin {
+  id        String   @id @default(cuid())
+  username  String   @unique
+  email     String   @unique
+  password  String
+  role      String   @default("admin")
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("admins")
+  @@index([username])
+  @@index([email])
+}
