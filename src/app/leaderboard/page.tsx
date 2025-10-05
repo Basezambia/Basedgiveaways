@@ -121,6 +121,13 @@ export default function LeaderboardPage() {
               </button>
             </Link>
           </div>
+          <div className="flex items-center gap-4">
+            <Link href="/results">
+              <button className="border border-white/30 px-3 py-1 font-mono text-xs hover:bg-white hover:text-black transition-all duration-300">
+                RESULTS
+              </button>
+            </Link>
+          </div>
         </div>
 
         {/* Title */}

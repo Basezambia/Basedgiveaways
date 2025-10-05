@@ -18,6 +18,8 @@ interface Campaign {
   eventDate?: Date
   location?: string
   artist?: string
+  isActive?: boolean
+  winnerSelected?: boolean
 }
 
 interface CampaignDetailProps {
@@ -219,12 +221,23 @@ export default function CampaignDetail({ campaign, onBackAction, onSubmitAction 
                     
                     {/* Submit Button - only show when wallet is connected */}
                     {isConnected && (
-                      <button
-                        onClick={() => setShowCompactView(true)}
-                        className="border border-white px-4 py-2 sm:px-6 sm:py-2 font-mono text-xs hover:bg-white hover:text-black transition-all duration-300 w-fit"
-                      >
-                        SUBMIT
-                      </button>
+                      <>
+                        {campaign.title === 'TRAVIS' && (campaign.isActive === false || campaign.winnerSelected === true) ? (
+                          <button
+                            disabled
+                            className="border border-red-500 bg-red-500/10 text-red-500 px-4 py-2 sm:px-6 sm:py-2 font-mono text-xs cursor-not-allowed opacity-70 w-fit"
+                          >
+                            PENDING
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => setShowCompactView(true)}
+                            className="border border-white px-4 py-2 sm:px-6 sm:py-2 font-mono text-xs hover:bg-white hover:text-black transition-all duration-300 w-fit"
+                          >
+                            SUBMIT
+                          </button>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>
@@ -233,8 +246,8 @@ export default function CampaignDetail({ campaign, onBackAction, onSubmitAction 
           </div>
         )}
 
-        {/* Protocol and Entry sections - only show when submit is clicked */}
-        {isConnected && showCompactView && (
+        {/* Protocol and Entry sections - only show when submit is clicked and campaign is active */}
+        {isConnected && showCompactView && !(campaign.title === 'TRAVIS' && (campaign.isActive === false || campaign.winnerSelected === true)) && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 max-w-6xl mx-auto mt-12 lg:mt-20">
             {/* Brutalist rules section */}
             <div className="space-y-8">

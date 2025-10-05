@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import WinnerSelectionAnimation from './WinnerSelectionAnimation';
 
 interface Campaign {
   id: string;
@@ -22,6 +23,14 @@ interface Campaign {
   };
 }
 
+interface Participant {
+  id: string;
+  name: string;
+  walletAddress: string;
+  email: string;
+  entryCount: number;
+}
+
 interface CampaignManagementProps {
   onNotificationAction: (type: 'info' | 'success' | 'warning' | 'error', message: string) => void;
 }
@@ -33,6 +42,10 @@ export default function CampaignManagement({ onNotificationAction }: CampaignMan
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showWinnerModal, setShowWinnerModal] = useState(false);
   const [blockHash, setBlockHash] = useState('');
+  const [participants, setParticipants] = useState<Participant[]>([]);
+  const [isSelecting, setIsSelecting] = useState(false);
+  const [selectedWinner, setSelectedWinner] = useState<Participant | null>(null);
+  const [showAnimation, setShowAnimation] = useState(false);
 
   useEffect(() => {
     fetchCampaigns();
@@ -76,11 +89,48 @@ export default function CampaignManagement({ onNotificationAction }: CampaignMan
     }
   };
 
+  const fetchParticipants = async (campaignId: string) => {
+    try {
+      const response = await fetch(`/api/admin/campaigns/${campaignId}/participants`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('admin_token')}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const formattedParticipants = data.participants.map((p: any) => ({
+          id: p.id,
+          name: p.name,
+          walletAddress: p.walletAddress,
+          email: p.email,
+          entryCount: p.entryCount || 1
+        }));
+        setParticipants(formattedParticipants);
+      } else {
+        onNotificationAction('error', 'Failed to fetch participants');
+        setParticipants([]);
+      }
+    } catch (error) {
+      onNotificationAction('error', 'Network error while fetching participants');
+      setParticipants([]);
+    }
+  };
+
   const selectWinner = async () => {
     if (!selectedCampaign || !blockHash.trim()) {
       onNotificationAction('error', 'Please provide a valid blockchain hash');
       return;
     }
+
+    if (participants.length === 0) {
+      onNotificationAction('error', 'No participants found for this campaign');
+      return;
+    }
+
+    // Start the animation
+    setShowAnimation(true);
+    setIsSelecting(true);
 
     try {
       const response = await fetch('/api/winner/select', {
@@ -98,17 +148,42 @@ export default function CampaignManagement({ onNotificationAction }: CampaignMan
       const data = await response.json();
 
       if (response.ok) {
-         await fetchCampaigns();
-         onNotificationAction('success', `Winner selected: ${data.winner.name} (${data.winner.walletAddress})`);
-         setShowWinnerModal(false);
-         setSelectedCampaign(null);
-         setBlockHash('');
-       } else {
-         onNotificationAction('error', data.error || 'Failed to select winner');
-       }
-     } catch (error) {
-       onNotificationAction('error', 'Network error while selecting winner');
+        // Find the winner in participants list
+        const winner = participants.find(p => p.id === data.winner.id);
+        if (winner) {
+          setSelectedWinner(winner);
+          // Animation will complete and call onAnimationComplete
+        } else {
+          onNotificationAction('error', 'Winner not found in participants list');
+          setIsSelecting(false);
+          setShowAnimation(false);
+        }
+      } else {
+        onNotificationAction('error', data.error || 'Failed to select winner');
+        setIsSelecting(false);
+        setShowAnimation(false);
+      }
+    } catch (error) {
+      onNotificationAction('error', 'Network error while selecting winner');
+      setIsSelecting(false);
+      setShowAnimation(false);
     }
+  };
+
+  const onAnimationComplete = (winner: Participant) => {
+    setIsSelecting(false);
+    onNotificationAction('success', `Winner selected: ${winner.name} (${winner.walletAddress})`);
+    
+    // Close modals and reset state after a delay
+    setTimeout(() => {
+      setShowAnimation(false);
+      setShowWinnerModal(false);
+      setSelectedCampaign(null);
+      setBlockHash('');
+      setSelectedWinner(null);
+      setParticipants([]);
+      fetchCampaigns(); // Refresh campaigns
+    }, 3000);
   };
 
   const deleteCampaign = async (campaignId: string) => {
@@ -245,8 +320,9 @@ export default function CampaignManagement({ onNotificationAction }: CampaignMan
 
                   {!campaign.winnerSelected && campaign.isActive && (
                     <button
-                      onClick={() => {
+                      onClick={async () => {
                         setSelectedCampaign(campaign);
+                        await fetchParticipants(campaign.id);
                         setShowWinnerModal(true);
                       }}
                       className="px-3 py-2 text-sm font-medium text-purple-700 bg-purple-100 hover:bg-purple-200 rounded-md transition-colors"
@@ -269,10 +345,16 @@ export default function CampaignManagement({ onNotificationAction }: CampaignMan
       )}
 
       {/* Winner Selection Modal */}
-      {showWinnerModal && selectedCampaign && (
+      {showWinnerModal && selectedCampaign && !showAnimation && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
             <h3 className="text-lg font-semibold mb-4">Select Winner for {selectedCampaign.title}</h3>
+            
+            <div className="mb-4">
+              <div className="text-sm text-gray-600 mb-2">
+                Found {participants.length} participants with {participants.reduce((sum, p) => sum + p.entryCount, 0)} total entries
+              </div>
+            </div>
             
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -296,6 +378,7 @@ export default function CampaignManagement({ onNotificationAction }: CampaignMan
                   setShowWinnerModal(false);
                   setSelectedCampaign(null);
                   setBlockHash('');
+                  setParticipants([]);
                 }}
                 className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
               >
@@ -303,12 +386,35 @@ export default function CampaignManagement({ onNotificationAction }: CampaignMan
               </button>
               <button
                 onClick={selectWinner}
-                disabled={!blockHash.trim()}
+                disabled={!blockHash.trim() || participants.length === 0}
                 className="flex-1 px-4 py-2 bg-purple-600 text-white hover:bg-purple-700 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Select Winner
+                Start Selection
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Animated Winner Selection */}
+      {showAnimation && selectedCampaign && (
+        <div className="fixed inset-0 bg-black bg-opacity-95 flex items-center justify-center z-50">
+          <div className="w-full max-w-4xl mx-4">
+            <div className="text-center mb-8">
+              <h2 className="text-3xl font-black font-mono text-white mb-2">
+                {selectedCampaign.title} CAMPAIGN
+              </h2>
+              <div className="text-gray-400 font-mono text-sm">
+                SELECTING WINNER FROM {participants.length} PARTICIPANTS
+              </div>
+            </div>
+            
+            <WinnerSelectionAnimation
+              participants={participants}
+              onCompleteAction={onAnimationComplete}
+              isSelecting={isSelecting}
+              finalWinner={selectedWinner || undefined}
+            />
           </div>
         </div>
       )}
