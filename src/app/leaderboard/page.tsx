@@ -92,7 +92,7 @@ export default function LeaderboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen bg-black text-white relative">
       {/* Brutalist background pattern */}
       <div className="fixed inset-0 opacity-5">
         <div className="absolute inset-0" style={{
@@ -101,12 +101,22 @@ export default function LeaderboardPage() {
         }} />
       </div>
 
+      {/* Terms & Conditions link - bottom left */}
+      <div className="fixed bottom-4 left-4 z-20">
+        <Link
+          href="/terms"
+          className="border border-white/30 px-3 py-1 font-mono text-xs hover:bg-white hover:text-black transition-all duration-300"
+        >
+          T&Cs
+        </Link>
+      </div>
+
       <div className="relative z-10 max-w-6xl mx-auto p-4">
         {/* Header */}
         <div className="flex items-center justify-between mb-8 pt-4">
           <div className="flex items-center gap-4">
             <Link href="/">
-              <button className="border border-white/30 px-3 py-1 font-mono text-xs hover:bg-white hover:text-black transition-all duration-300">
+              <button className="border border-white/30 px-2 sm:px-3 py-1 font-mono text-xs hover:bg-white hover:text-black transition-all duration-300">
                 ← BACK
               </button>
             </Link>
@@ -114,58 +124,58 @@ export default function LeaderboardPage() {
         </div>
 
         {/* Title */}
-        <div className="text-center mb-12">
-          <h1 className="text-6xl md:text-8xl font-black tracking-tighter">
+        <div className="text-center mb-10">
+          <h1 className="text-5xl md:text-6xl font-black font-mono tracking-tighter">
             LEADERBOARD
           </h1>
         </div>
 
         {/* Leaderboard Table */}
-        <div className="border border-white/30">
+        <div className="border border-white/30 max-w-4xl mx-auto">
           {/* Table Header */}
           <div className="border-b border-white/30 bg-white/5">
-            <div className="grid grid-cols-4 gap-4 p-4 font-mono text-xs font-bold">
-              <div>RANK</div>
-              <div>PARTICIPANT</div>
-              <div>WALLET</div>
-              <div className="text-right">ENTRIES</div>
+            <div className="grid grid-cols-4 gap-4 p-3 font-mono text-xs font-bold">
+              <div className="text-center">RANK</div>
+              <div className="text-center">PARTICIPANT</div>
+              <div className="text-center">WALLET</div>
+              <div className="text-center">ENTRIES</div>
             </div>
           </div>
 
           {/* Table Body */}
-          <div>
+          <div className={data?.leaderboard && data.leaderboard.length > 5 ? "max-h-80 overflow-y-auto" : ""}>
             {data?.leaderboard && data.leaderboard.length > 0 ? (
               data.leaderboard.map((entry) => (
                 <div
                   key={entry.id}
-                  className={`grid grid-cols-4 gap-4 p-4 border-b border-white/10 hover:bg-white/5 transition-colors ${
+                  className={`grid grid-cols-4 gap-4 p-3 border-b border-white/10 hover:bg-white/5 transition-colors ${
                     entry.position <= 3 ? 'bg-white/10' : ''
                   }`}
                 >
-                  <div className="font-mono text-sm font-bold">
+                  <div className="font-mono text-sm font-bold text-center">
                     #{entry.position}
                   </div>
                   
-                  <div>
+                  <div className="text-center">
                     <div className="font-mono text-sm font-bold">{entry.name}</div>
                     {entry.isVerified && (
                       <div className="text-xs text-green-400 font-mono mt-1">VERIFIED</div>
                     )}
                   </div>
                   
-                  <div className="font-mono text-xs text-gray-400">
+                  <div className="font-mono text-xs text-gray-400 text-center">
                     {entry.walletAddress.slice(0, 6)}...{entry.walletAddress.slice(-4)}
                   </div>
                   
-                  <div className="text-right">
-                    <div className="font-mono text-lg font-bold">
+                  <div className="text-center">
+                    <div className="font-mono text-base font-bold">
                       {entry.entryCount}
                     </div>
                   </div>
                 </div>
               ))
             ) : (
-              <div className="p-8 text-center font-mono text-sm text-gray-400">
+              <div className="p-6 text-center font-mono text-sm text-gray-400">
                 NO PARTICIPANTS YET
               </div>
             )}

@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '../../../lib/prisma'
+import { supabase } from '../../../lib/supabase'
 
 export async function POST(request: Request) {
   try {
     // Add connection check for Vercel
-    if (!process.env.DATABASE_URL) {
-      console.error('DATABASE_URL is not set')
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+      console.error('Supabase configuration is not set')
       return NextResponse.json(
         { error: 'Database configuration error' },
         { status: 500 }
@@ -47,11 +47,13 @@ export async function POST(request: Request) {
     }
 
     // Check if campaign exists and is active
-    const campaign = await prisma.campaign.findUnique({
-      where: { id: campaignId }
-    })
+    const { data: campaign, error: campaignError } = await supabase
+      .from('campaigns')
+      .select('*')
+      .eq('id', campaignId)
+      .single()
 
-    if (!campaign) {
+    if (campaignError || !campaign) {
       return NextResponse.json(
         { error: 'Campaign not found' },
         { status: 404 }
@@ -65,15 +67,57 @@ export async function POST(request: Request) {
       )
     }
 
-    // Check for duplicate entry by wallet address
-    const existingSubmission = await prisma.submission.findFirst({
-      where: {
-        walletAddress: walletAddress,
-        campaignId: campaignId
-      }
-    })
+    // Check for duplicate entries by email address (across all campaigns)
+    const { data: emailSubmissions, error: emailError } = await supabase
+      .from('submissions')
+      .select('*')
+      .eq('email', email)
 
-    if (existingSubmission) {
+    if (emailError) {
+      console.error('Email duplicate check error:', emailError)
+      return NextResponse.json(
+        { error: 'Failed to validate submission' },
+        { status: 500 }
+      )
+    }
+
+    if (emailSubmissions && emailSubmissions.length >= 2) {
+      return NextResponse.json(
+        { 
+          error: 'Duplicate email detected',
+          message: 'This email address has already been used to sign up. You have already signed up!'
+        },
+        { status: 409 }
+      )
+    }
+
+    // Check for duplicate entries by wallet address (across all campaigns)
+    const { data: walletSubmissions, error: walletError } = await supabase
+      .from('submissions')
+      .select('*')
+      .eq('walletAddress', walletAddress)
+
+    if (walletError) {
+      console.error('Wallet duplicate check error:', walletError)
+      return NextResponse.json(
+        { error: 'Failed to validate submission' },
+        { status: 500 }
+      )
+    }
+
+    if (walletSubmissions && walletSubmissions.length >= 2) {
+      return NextResponse.json(
+        { 
+          error: 'Duplicate wallet detected',
+          message: 'This wallet address has already been used to sign up. You have already signed up!'
+        },
+        { status: 409 }
+      )
+    }
+
+    // Check for duplicate entry by wallet address in the same campaign
+    const existingCampaignSubmission = walletSubmissions?.find(sub => sub.campaignId === campaignId)
+    if (existingCampaignSubmission) {
       return NextResponse.json(
         { 
           error: 'Duplicate entry detected',
@@ -84,16 +128,26 @@ export async function POST(request: Request) {
     }
 
     // Create new submission
-    const submission = await prisma.submission.create({
-      data: {
+    const { data: submission, error: submissionError } = await supabase
+      .from('submissions')
+      .insert({
         name,
         email,
         walletAddress,
         tweetUrl: tweetUrl || null,
         campaignId,
         entryCount: 1
-      }
-    })
+      })
+      .select()
+      .single()
+
+    if (submissionError) {
+      console.error('Submission creation error:', submissionError)
+      return NextResponse.json(
+        { error: 'Failed to create submission' },
+        { status: 500 }
+      )
+    }
 
     return NextResponse.json({ 
       success: true, 

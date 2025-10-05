@@ -1,5 +1,6 @@
 'use client';
 
+import { useProgressiveReveal } from '@/hooks/useProgressiveReveal'
 import { useState, useEffect } from 'react'
 import { useAccount } from 'wagmi'
 import CampaignCarousel from '@/components/CampaignCarousel'
@@ -9,7 +10,7 @@ import AdminAuth from '@/components/AdminAuth'
 import AdminPanel from '@/components/AdminPanel'
 import { MiniKitProvider } from '@/components/MiniKitProvider'
 import { WalletProvider } from '@/components/WalletProvider'
-import { WalletButton } from '@/components/WalletButton'
+import WalletButton from '@/components/WalletButton'
 import { minikitConfig } from '../../minikit.config'
 
 interface Campaign {
@@ -38,6 +39,7 @@ export default function Home() {
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null)
   const [view, setView] = useState<View>('carousel')
   const [loading, setLoading] = useState(true)
+  const progressiveRevealRef = useProgressiveReveal({ stagger: 50 })
   const { address, isConnected } = useAccount()
 
   // Check if connected wallet is admin
@@ -70,16 +72,15 @@ export default function Home() {
       if (response.ok) {
         const data = await response.json()
         // Transform the API response to match the expected Campaign interface
+        // Exclude event details for carousel display - they should only appear in detailed view
         const transformedCampaigns: Campaign[] = data.campaigns.map((campaign: any) => ({
           id: campaign.id,
           title: campaign.title,
           description: campaign.description,
           imageUrl: campaign.imageUrl || '/campaign1.png', // fallback image
           rules: campaign.rules,
-          endTime: campaign.endTime ? new Date(campaign.endTime) : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-          eventDate: campaign.eventDate ? new Date(campaign.eventDate) : new Date(),
-          location: campaign.location || 'TBD',
-          artist: campaign.artist || campaign.title
+          endTime: campaign.endTime ? new Date(campaign.endTime) : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+          // Event details (eventDate, location, artist) are intentionally excluded from carousel
         }))
         setCampaigns(transformedCampaigns)
       } else {
@@ -96,8 +97,28 @@ export default function Home() {
     }
   }
 
-  const handleCampaignSelect = (campaign: Campaign) => {
-    setSelectedCampaign(campaign)
+  const handleCampaignSelect = async (campaign: Campaign) => {
+    try {
+      // Fetch full campaign data including event details for detailed view
+      const response = await fetch(`/api/campaigns/${campaign.id}`)
+      if (response.ok) {
+        const data = await response.json()
+        const fullCampaign: Campaign = {
+          ...campaign,
+          eventDate: data.campaign.eventDate ? new Date(data.campaign.eventDate) : undefined,
+          location: data.campaign.location || undefined,
+          artist: data.campaign.artist || undefined
+        }
+        setSelectedCampaign(fullCampaign)
+      } else {
+        // Fallback to basic campaign data if detailed fetch fails
+        setSelectedCampaign(campaign)
+      }
+    } catch (error) {
+      console.error('Failed to fetch detailed campaign data:', error)
+      // Fallback to basic campaign data
+      setSelectedCampaign(campaign)
+    }
     setView('detail')
   }
 
@@ -170,9 +191,9 @@ export default function Home() {
       </div>
 
       {view === 'carousel' && (
-        <div className="relative z-10 flex flex-col items-center justify-center min-h-screen p-4">
+        <div className="relative z-10 flex flex-col items-center justify-center min-h-screen p-4" ref={progressiveRevealRef}>
           {/* Wallet connection button - top right on desktop, above title on mobile */}
-          <div className="hidden sm:flex absolute top-4 right-4 z-20 gap-2">
+          <div className="hidden sm:flex absolute top-4 right-4 z-20 gap-2" data-reveal="0">
             <a
               href="/leaderboard"
               className="border border-white/30 px-3 py-1 font-mono text-xs hover:bg-white hover:text-black transition-all duration-300"
@@ -190,18 +211,28 @@ export default function Home() {
             <WalletButton />
           </div>
 
+          {/* Terms & Conditions link - bottom left (hidden on mobile) */}
+          <div className="hidden sm:block absolute bottom-4 left-4 z-20">
+            <a
+              href="/terms"
+              className="border border-white/30 px-3 py-1 font-mono text-xs hover:bg-white hover:text-black transition-all duration-300 animate-breathe"
+            >
+              T&Cs
+            </a>
+          </div>
+
           {/* Mobile wallet button - above title */}
-          <div className="flex sm:hidden w-full justify-center mb-6 gap-2">
+          <div className="flex sm:hidden w-full justify-center mb-4 gap-2" data-reveal="1">
             <a
               href="/leaderboard"
-              className="border border-white/30 px-3 py-1 font-mono text-xs hover:bg-white hover:text-black transition-all duration-300"
+              className="border border-white/30 px-2 sm:px-3 py-1 font-mono text-xs hover:bg-white hover:text-black transition-all duration-300 animate-breathe"
             >
               LEADERBOARD
             </a>
             {isAdmin && (
               <button
                 onClick={() => setView('admin')}
-                className="border border-white/30 px-3 py-1 font-mono text-xs hover:bg-white hover:text-black transition-all duration-300"
+                className="border border-white/30 px-2 sm:px-3 py-1 font-mono text-xs hover:bg-white hover:text-black transition-all duration-300"
               >
                 ADMIN
               </button>
@@ -210,7 +241,7 @@ export default function Home() {
           </div>
 
           {/* Floating header - consistent spacing across all screen sizes */}
-          <div className="mb-6 text-center animate-float px-4">
+            <div className="mb-6 text-center animate-theta-wave px-4" data-reveal="3">
             <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-black tracking-tighter mb-3">
               BASED
             </h1>
@@ -220,7 +251,7 @@ export default function Home() {
           </div>
           
           {/* Floating carousel with consistent spacing */}
-          <div className="w-full max-w-4xl lg:max-w-5xl xl:max-w-6xl transform hover:scale-[1.02] transition-transform duration-700 animate-float mb-6">
+          <div className="w-full max-w-4xl lg:max-w-5xl xl:max-w-6xl transform hover:scale-[1.02] transition-transform duration-700 animate-theta-wave mb-6" data-reveal="4">
             <CampaignCarousel
               campaigns={campaigns}
               onCampaignSelectAction={handleCampaignSelect}
@@ -232,6 +263,16 @@ export default function Home() {
             <div className="inline-block border border-white/20 px-6 py-2">
               <p className="text-xs font-mono text-gray-500">SCROLL TO EXPLORE</p>
             </div>
+          </div>
+
+          {/* Mobile Terms & Conditions link - below SCROLL TO EXPLORE */}
+          <div className="flex sm:hidden w-full justify-center mb-4" data-reveal="5">
+            <a
+              href="/terms"
+              className="border border-white/30 px-3 py-1 font-mono text-xs hover:bg-white hover:text-black transition-all duration-300"
+            >
+              TERMS & CONDITIONS
+            </a>
           </div>
         </div>
       )}

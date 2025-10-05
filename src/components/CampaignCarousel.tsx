@@ -10,9 +10,7 @@ interface Campaign {
   description: string
   imageUrl: string
   endTime?: Date
-  eventDate?: Date
-  location?: string
-  artist?: string
+  // Event details (eventDate, location, artist) removed - they should only appear in detailed view
 }
 
 interface VisibleCampaign extends Campaign {
@@ -188,20 +186,8 @@ export default function CampaignCarousel({ campaigns, onCampaignSelectAction }: 
                   {campaign.isCenter && (
                     <div className="space-y-3 sm:space-y-4">
                       <p className="text-sm sm:text-base opacity-80 font-light">
-                        {campaign.description}
+                        WIN A FREE {campaign.title} TICKET
                       </p>
-                      {campaign.eventDate && campaign.location && (
-                        <div className="text-xs sm:text-sm opacity-70 font-mono space-y-1">
-                          <div>📅 {new Date(campaign.eventDate).toLocaleDateString('en-US', { 
-                            weekday: 'short', 
-                            year: 'numeric', 
-                            month: 'short', 
-                            day: 'numeric' 
-                          })}</div>
-                          <div>📍 {campaign.location}</div>
-                          {campaign.artist && <div>🎤 {campaign.artist}</div>}
-                        </div>
-                      )}
                       <button 
                         onClick={(e) => handleEnterClick(campaign, e)}
                         className="border border-white px-3 py-1 sm:px-4 sm:py-2 md:px-6 md:py-2 text-xs font-mono hover:bg-white hover:text-black transition-all duration-300"

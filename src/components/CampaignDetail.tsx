@@ -83,43 +83,47 @@ export default function CampaignDetail({ campaign, onBackAction, onSubmitAction 
   const requiredTags = campaign.rules?.match(/@[\w]+/g) || ['@basezambia', '@basesoutheraf', '@base', '@jessepollak']
 
   const getConcertInfo = () => {
-    // Use dynamic event details from campaign data if available
-    if (campaign.eventDate || campaign.location || campaign.artist) {
+    // First check if campaign has event details from database
+    if (campaign.eventDate && campaign.location && campaign.artist) {
+      const eventDate = new Date(campaign.eventDate)
+      const formattedDate = eventDate.toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      })
+
+      // Get specific details based on campaign
+      if (campaign.title === 'TRAVIS') {
+        return {
+          title: "TRAVIS CONCERT INFORMATION",
+          date: formattedDate,
+          venue: campaign.location,
+          description: "Travis Scott's Circus Maximus World Tour will land in South Africa on 11 October 2025 at FNB Stadium in Johannesburg, bringing his high-energy production, visuals, and chart-topping hits to fans as part of a global stadium run. This monumental concert represents Travis Scott's highly anticipated return to South African soil, promising an unforgettable night of music featuring hits from his acclaimed albums including 'Astroworld', 'Rodeo', and 'Utopia'. The show will feature his signature stage design, pyrotechnics, and immersive visual effects that have made his live performances legendary worldwide. Fans can expect to hear chart-toppers like 'SICKO MODE', 'Goosebumps', 'Antidote', and tracks from his latest releases.",
+          sources: ["Wikipedia", "Art Moves Culture", "help.ticketmaster.co.za"]
+        }
+      } else if (campaign.title === 'YE') {
+        return {
+          title: "YE CONCERT INFORMATION",
+          date: formattedDate,
+          venue: campaign.location,
+          description: "Ye (formerly Kanye West) is slated for a one-night concert in South Africa on 13 December 2025 at Ellis Park Stadium in Johannesburg — billed as his only African stop for the year and a landmark return to the country's live music scene. This highly anticipated event marks Ye's triumphant return to South Africa, promising an extraordinary musical experience featuring his extensive catalog of groundbreaking hits spanning over two decades. Fans can expect to hear iconic tracks from 'The College Dropout', 'Late Registration', 'Graduation', 'My Beautiful Dark Twisted Fantasy', 'Yeezus', 'The Life of Pablo', 'Donda', and his latest releases. Known for his innovative stage productions and thought-provoking performances, this concert represents a historic moment for South African hip-hop and music culture.",
+          sources: ["sahiphopmag.co.za", "Joburg ETC", "capetownetc.com"]
+        }
+      }
+
+      // Generic fallback for other campaigns with database data
       return {
-        title: `${campaign.artist?.toUpperCase() || campaign.title} CONCERT INFORMATION`,
-        date: campaign.eventDate ? new Date(campaign.eventDate).toLocaleDateString('en-US', { 
-          weekday: 'long',
-          year: 'numeric', 
-          month: 'long', 
-          day: 'numeric' 
-        }) : "TBA",
-        venue: campaign.location || "TBA",
-        description: campaign.description || "More details coming soon.",
+        title: `${campaign.artist} CONCERT INFORMATION`,
+        date: formattedDate,
+        venue: campaign.location,
+        description: `Join us for an incredible concert experience featuring ${campaign.artist}!`,
         sources: ["Official", "Verified"]
       }
     }
 
-    // Fallback to hardcoded data for existing campaigns without event details
-    switch (campaign.id) {
-      case 'cmg3tceh20000cc1sgmmrdgd7': // YE
-        return {
-          title: "YE CONCERT INFORMATION",
-          date: "13 December 2025",
-          venue: "Ellis Park Stadium, Johannesburg",
-          description: "Ye (formerly Kanye West) is slated for a one-night concert in South Africa on 13 December 2025 at Ellis Park Stadium in Johannesburg — billed as his only African stop for the year and a landmark return to the country's live music scene. This highly anticipated event marks a significant moment in South African entertainment history, featuring tracks from his extensive discography spanning over two decades of genre-defining work. Ellis Park Stadium provides the perfect backdrop for an unforgettable night of music, visual spectacle, and artistic expression with cutting-edge technology and raw emotional performance.",
-          sources: ["Wikipedia", "Art Moves Culture", "help.ticketmaster.co.za"]
-        }
-      case 'cmg3tcqwk0001cc1sz2bgxijd': // Travis Scott
-        return {
-          title: "TRAVIS CONCERT INFORMATION",
-          date: "11 October 2025",
-          venue: "FNB Stadium, Johannesburg",
-          description: "Travis Scott's Circus Maximus World Tour will land in South Africa on 11 October 2025 at FNB Stadium in Johannesburg, bringing his high-energy production, visuals, and chart-topping hits to fans as part of a global stadium run. This monumental concert represents Travis Scott's first major performance in South Africa, marking a historic moment for the country's hip-hop scene. The Circus Maximus tour features elaborate set pieces, pyrotechnics, and interactive audience experiences that create a carnival-like atmosphere, showcasing hits from 'Astroworld,' 'Rodeo,' and 'Utopia.'",
-          sources: ["Wikipedia", "Art Moves Culture", "help.ticketmaster.co.za"]
-        }
-      default:
-        return null
-    }
+    // No event details available
+    return null
   }
 
   const concertInfo = getConcertInfo()
@@ -170,7 +174,7 @@ export default function CampaignDetail({ campaign, onBackAction, onSubmitAction 
                     {campaign.title}
                   </h1>
                   <p className="text-sm sm:text-base md:text-lg font-light opacity-80">
-                    {campaign.description}
+                    WIN A FREE {campaign.title} TICKET
                   </p>
                 </div>
               </div>

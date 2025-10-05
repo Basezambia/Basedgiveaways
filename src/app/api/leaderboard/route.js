@@ -1,11 +1,11 @@
-import { prisma } from '../../../lib/prisma';
+import { supabase } from '../../../lib/supabase';
 import { NextResponse } from 'next/server';
 
 export async function GET(request) {
   try {
     // Add connection check for Vercel
-    if (!process.env.DATABASE_URL) {
-      console.error('DATABASE_URL is not set')
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+      console.error('Supabase configuration is not set')
       return NextResponse.json(
         { error: 'Database configuration error' },
         { status: 500 }
@@ -16,49 +16,40 @@ export async function GET(request) {
     const campaignId = searchParams.get('campaignId');
     const limit = parseInt(searchParams.get('limit') || '50');
 
-    // Build query with Prisma - filter out test entries
-    const whereCondition = {
-      campaign: {
-        isActive: true
-      },
-      // Filter out test entries
-      AND: [
-        {
-          NOT: {
-            OR: [
-              { name: { contains: 'test' } },
-              { name: { contains: 'Test' } },
-              { email: { contains: 'test' } },
-              { email: { contains: 'example' } },
-              { walletAddress: { contains: '0x1234' } },
-              { walletAddress: { contains: '0xtest' } }
-            ]
-          }
-        }
-      ]
-    };
+    // Build query with Supabase - filter out test entries and get submissions with campaign data
+    let query = supabase
+      .from('submissions')
+      .select(`
+        *,
+        campaigns!inner(
+          title,
+          isActive
+        )
+      `)
+      .eq('campaigns.isActive', true)
+      .not('name', 'ilike', '%test%')
+      .not('email', 'ilike', '%test%')
+      .not('email', 'ilike', '%example%')
+      .not('walletAddress', 'ilike', '%0x1234%')
+      .not('walletAddress', 'ilike', '%0xtest%')
+      .order('entryCount', { ascending: false })
+      .order('createdAt', { ascending: true })
+      .limit(limit)
 
     // Filter by campaign if specified
     if (campaignId) {
-      whereCondition.campaignId = campaignId;
+      query = query.eq('campaignId', campaignId)
     }
 
-    const submissions = await prisma.submission.findMany({
-      where: whereCondition,
-      include: {
-        campaign: {
-          select: {
-            title: true,
-            isActive: true
-          }
-        }
-      },
-      orderBy: [
-        { entryCount: 'desc' },
-        { createdAt: 'asc' }
-      ],
-      take: limit
-    });
+    const { data: submissions, error: submissionsError } = await query
+
+    if (submissionsError) {
+      console.error('Submissions query error:', submissionsError)
+      return NextResponse.json(
+        { error: 'Failed to fetch submissions' },
+        { status: 500 }
+      )
+    }
 
     // Calculate rankings and add position
     const leaderboard = submissions.map((submission, index) => ({
@@ -69,20 +60,34 @@ export async function GET(request) {
       entryCount: submission.entryCount,
       isVerified: submission.isVerified,
       submissionDate: submission.createdAt,
-      campaignTitle: submission.campaign.title,
+      campaignTitle: submission.campaigns.title,
       campaignId: submission.campaignId,
       // Mask email for privacy (show only first 3 chars + domain)
       maskedEmail: submission.email.replace(/(.{3}).*(@.*)/, '$1***$2')
     }));
 
     // Get total participants count
-    const totalParticipants = await prisma.submission.count({
-      where: campaignId ? { campaignId: campaignId } : {}
-    });
+    let totalParticipantsQuery = supabase
+      .from('submissions')
+      .select('id', { count: 'exact' })
+
+    if (campaignId) {
+      totalParticipantsQuery = totalParticipantsQuery.eq('campaignId', campaignId)
+    }
+
+    const { count: totalParticipants, error: countError } = await totalParticipantsQuery
+
+    if (countError) {
+      console.error('Count query error:', countError)
+      return NextResponse.json(
+        { error: 'Failed to fetch participant count' },
+        { status: 500 }
+      )
+    }
 
     // Get campaign statistics
     const totalEntries = submissions.reduce((sum, sub) => sum + sub.entryCount, 0);
-    const participantCount = totalParticipants;
+    const participantCount = totalParticipants || 0;
     
     const stats = {
       totalParticipants: participantCount,
