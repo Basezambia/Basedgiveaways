@@ -225,6 +225,9 @@ export default function ResultsPage() {
         {/* Winners Section */}
         {campaignsWithWinners.length > 0 && (
           <div className="mb-8">
+            <h2 className="text-lg font-black font-mono mb-4 text-center">
+              🏆 WINNERS ANNOUNCED
+            </h2>
             
             <div className="space-y-4">
               {campaignsWithWinners.map((campaign) => {
@@ -357,35 +360,6 @@ export default function ResultsPage() {
                   </div>
                 )
               })}
-            </div>
-          </div>
-        )}
-
-        {/* Pending Campaigns Section */}
-        {campaignsWithoutWinners.length > 0 && (
-          <div className="mb-12">
-            <h2 className="text-lg font-black font-mono mb-4 text-center">
-              ⏳ PENDING CAMPAIGNS
-            </h2>
-            
-            <div className="space-y-3">
-              {campaignsWithoutWinners.map((campaign) => (
-                <div key={campaign.id} className="border border-white/30 bg-white/5">
-                  <div className="p-3 flex items-center justify-between">
-                    <div>
-                      <h3 className="text-sm font-black font-mono">
-                        {campaign.title} CAMPAIGN
-                      </h3>
-                      <div className="text-gray-400 font-mono text-xs mt-1">
-                        Status: {campaign.isActive ? 'ACTIVE' : 'INACTIVE'}
-                      </div>
-                    </div>
-                    <div className="text-orange-400 font-mono text-xs font-bold">
-                      NO WINNER YET
-                    </div>
-                  </div>
-                </div>
-              ))}
             </div>
           </div>
         )}
