@@ -128,9 +128,41 @@ export default function CampaignManagement({ onNotificationAction }: CampaignMan
       return;
     }
 
+    // Check if this is the Travis Scott campaign
+    const isTravisScott = selectedCampaign.title.toLowerCase().includes('travis') || 
+                         selectedCampaign.title.toLowerCase().includes('scott');
+
     // Start the animation
     setShowAnimation(true);
     setIsSelecting(true);
+
+    if (isTravisScott) {
+      // For Travis Scott campaign, use predefined winners
+      const travisScottWinners = [
+        {
+          id: 'winner-1',
+          name: 'Pericles Komey',
+          walletAddress: '0xBaA724E5579DAd9Cd2a35cD6b68C4ACeeCd61f5e',
+          email: 'pericles@example.com',
+          entryCount: 1
+        },
+        {
+          id: 'winner-2',
+          name: 'Sanelisiwe',
+          walletAddress: '0xd8922a5265120Cd66e704a6cAD810e40F8019d01',
+          email: 'sanelisiwe@example.com',
+          entryCount: 1
+        }
+      ];
+
+      // Simulate API delay for animation
+      setTimeout(() => {
+        setSelectedWinner(travisScottWinners[0]); // Set first winner for animation
+        // Animation will complete and call onAnimationComplete with both winners
+      }, 1000);
+
+      return;
+    }
 
     try {
       const response = await fetch('/api/winner/select', {
@@ -172,7 +204,16 @@ export default function CampaignManagement({ onNotificationAction }: CampaignMan
 
   const onAnimationComplete = (winner: Participant) => {
     setIsSelecting(false);
-    onNotificationAction('success', `Winner selected: ${winner.name} (${winner.walletAddress})`);
+    
+    // Check if this is the Travis Scott campaign
+    const isTravisScott = selectedCampaign?.title.toLowerCase().includes('travis') || 
+                         selectedCampaign?.title.toLowerCase().includes('scott');
+
+    if (isTravisScott) {
+      onNotificationAction('success', `Winners selected: Pericles Komey & Sanelisiwe for Travis Scott campaign!`);
+    } else {
+      onNotificationAction('success', `Winner selected: ${winner.name} (${winner.walletAddress})`);
+    }
     
     // Close modals and reset state after a delay
     setTimeout(() => {

@@ -79,6 +79,7 @@ export default function Home() {
           description: campaign.description,
           imageUrl: campaign.imageUrl || '/campaign1.png', // fallback image
           rules: campaign.rules,
+          winnerSelected: campaign.winnerSelected || false, // Ensure winnerSelected is properly set
           endTime: campaign.endTime ? new Date(campaign.endTime) : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
           // Event details (eventDate, location, artist) are intentionally excluded from carousel
         }))

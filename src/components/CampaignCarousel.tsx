@@ -10,6 +10,7 @@ interface Campaign {
   description: string
   imageUrl: string
   endTime?: Date
+  winnerSelected?: boolean
   // Event details (eventDate, location, artist) removed - they should only appear in detailed view
 }
 
@@ -59,25 +60,52 @@ export default function CampaignCarousel({ campaigns, onCampaignSelectAction }: 
 
   const handleEnterClick = (campaign: Campaign, e: React.MouseEvent) => {
     e.stopPropagation()
-    onCampaignSelectAction(campaign)
+    e.preventDefault()
+    
+    // If campaign has winners selected, navigate to results page
+    if (campaign.winnerSelected) {
+      window.location.href = '/results'
+    } else {
+      // Otherwise, go to campaign detail page
+      onCampaignSelectAction(campaign)
+    }
   }
 
   // Touch handlers for mobile swipe
   const handleTouchStart = (e: React.TouchEvent) => {
+    // Check if the touch started on a button
+    const target = e.target as HTMLElement
+    if (target.tagName === 'BUTTON' || target.closest('button')) {
+      return // Don't start touch handling if touching a button
+    }
+    
     setTouchStart(e.targetTouches[0].clientX)
     stopAutoScroll()
   }
 
   const handleTouchMove = (e: React.TouchEvent) => {
+    // Check if the touch is on a button
+    const target = e.target as HTMLElement
+    if (target.tagName === 'BUTTON' || target.closest('button')) {
+      return // Don't handle touch move if on a button
+    }
+    
     setTouchEnd(e.targetTouches[0].clientX)
   }
 
   const handleTouchEnd = () => {
+    // Only handle swipe if we have valid touch coordinates
+    if (touchStart === 0) return
+    
     if (touchStart - touchEnd > 50) {
       nextCampaign()
     } else if (touchEnd - touchStart > 50) {
       prevCampaign()
     }
+    
+    // Reset touch coordinates
+    setTouchStart(0)
+    setTouchEnd(0)
     startAutoScroll()
   }
 
@@ -185,15 +213,31 @@ export default function CampaignCarousel({ campaigns, onCampaignSelectAction }: 
                   </h2>
                   {campaign.isCenter && (
                     <div className="space-y-3 sm:space-y-4">
-                      <p className="text-sm sm:text-base opacity-80 font-light">
-                        WIN A FREE {campaign.title} TICKET
-                      </p>
-                      <button 
-                        onClick={(e) => handleEnterClick(campaign, e)}
-                        className="border border-white px-3 py-1 sm:px-4 sm:py-2 md:px-6 md:py-2 text-xs font-mono hover:bg-white hover:text-black transition-all duration-300"
-                      >
-                        ENTER
-                      </button>
+                      {campaign.winnerSelected ? (
+                        <div className="space-y-2">
+                          <div className="text-green-400 font-mono text-xs font-bold">
+                            WINNER SELECTED
+                          </div>
+                          <button 
+                            onClick={(e) => handleEnterClick(campaign, e)}
+                            className="border border-green-500 bg-green-500/10 text-green-500 px-3 py-1 sm:px-4 sm:py-2 md:px-6 md:py-2 text-xs font-mono hover:bg-green-500 hover:text-black transition-all duration-300"
+                          >
+                            VIEW RESULTS
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <p className="text-sm sm:text-base opacity-80 font-light">
+                            WIN A FREE {campaign.title} TICKET
+                          </p>
+                          <button 
+                            onClick={(e) => handleEnterClick(campaign, e)}
+                            className="border border-white px-3 py-1 sm:px-4 sm:py-2 md:px-6 md:py-2 text-xs font-mono hover:bg-white hover:text-black transition-all duration-300"
+                          >
+                            ENTER
+                          </button>
+                        </>
+                      )}
                     </div>
                   )}
                 </div>
@@ -216,8 +260,8 @@ export default function CampaignCarousel({ campaigns, onCampaignSelectAction }: 
         </div>
       </div>
 
-      {/* Brutalist dots */}
-      <div className="mt-4 sm:mt-6 flex justify-center gap-2 sm:gap-4">
+      {/* Navigation dots - only on mobile */}
+      <div className="mt-4 sm:hidden flex justify-center gap-2">
         {campaigns.map((_, index) => (
           <button
             key={index}
@@ -238,6 +282,7 @@ export default function CampaignCarousel({ campaigns, onCampaignSelectAction }: 
           />
         ))}
       </div>
+
     </div>
   )
 }

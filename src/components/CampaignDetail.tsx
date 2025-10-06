@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import { ArrowLeft, Twitter, ExternalLink, AlertCircle } from 'lucide-react'
 import { useAccount } from 'wagmi'
-import { WalletButton } from './WalletButton'
+import WalletButton from './WalletButton'
 import SocialShare from './SocialShare'
 import EmailNotifications, { useEmailNotifications } from './EmailNotifications'
 
@@ -219,10 +219,17 @@ export default function CampaignDetail({ campaign, onBackAction, onSubmitAction 
                       </div>
                     </div>
                     
-                    {/* Submit Button - only show when wallet is connected */}
+                    {/* Submit Button or Results Button - only show when wallet is connected */}
                     {isConnected && (
                       <>
-                        {campaign.title === 'TRAVIS' && (campaign.isActive === false || campaign.winnerSelected === true) ? (
+                        {campaign.winnerSelected ? (
+                          <button
+                            onClick={() => window.location.href = '/results'}
+                            className="border border-green-500 bg-green-500/10 text-green-500 px-4 py-2 sm:px-6 sm:py-2 font-mono text-xs hover:bg-green-500 hover:text-black transition-all duration-300 w-fit"
+                          >
+                            VIEW RESULTS
+                          </button>
+                        ) : campaign.title === 'TRAVIS' && campaign.isActive === false ? (
                           <button
                             disabled
                             className="border border-red-500 bg-red-500/10 text-red-500 px-4 py-2 sm:px-6 sm:py-2 font-mono text-xs cursor-not-allowed opacity-70 w-fit"
@@ -246,8 +253,8 @@ export default function CampaignDetail({ campaign, onBackAction, onSubmitAction 
           </div>
         )}
 
-        {/* Protocol and Entry sections - only show when submit is clicked and campaign is active */}
-        {isConnected && showCompactView && !(campaign.title === 'TRAVIS' && (campaign.isActive === false || campaign.winnerSelected === true)) && (
+        {/* Protocol and Entry sections - only show when submit is clicked and campaign is active and no winners selected */}
+        {isConnected && showCompactView && !campaign.winnerSelected && !(campaign.title === 'TRAVIS' && campaign.isActive === false) && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 max-w-6xl mx-auto mt-12 lg:mt-20">
             {/* Brutalist rules section */}
             <div className="space-y-8">
